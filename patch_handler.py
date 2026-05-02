@@ -14,7 +14,7 @@ import sys
 
 FIX_CODE = """{indent}# Message cleanup for OpenAI-compatible providers.
 {indent}# Merges consecutive assistant messages, truncates orphaned tool_calls,
-{indent}# and ensures reasoning_content for DeepSeek multi-turn compatibility.
+{indent}# and ensures tool messages follow their tool_calls (DeepSeek requires this).
 {indent}_model = _completion_args.get("model") or _litellm_req.get("model", "")
 {indent}_is_deepseek = "deepseek" in str(_model).lower()
 {indent}_messages = _completion_args.get("messages") or _litellm_req.get("messages")
@@ -37,22 +37,23 @@ FIX_CODE = """{indent}# Message cleanup for OpenAI-compatible providers.
 {indent}            }}
 {indent}        else:
 {indent}            _merged.append(_m)
-{indent}    # Step 2: collect resolved tool_call_ids (provider-agnostic)
-{indent}    _resolved_ids = set()
-{indent}    for _m in _merged:
-{indent}        if isinstance(_m, dict) and _m.get("role") == "tool":
-{indent}            _tc_id = _m.get("tool_call_id")
-{indent}            if _tc_id:
-{indent}                _resolved_ids.add(str(_tc_id))
-{indent}    # Step 3: fix messages (provider-agnostic + DeepSeek reasoning_content)
+{indent}    # Step 2: for each assistant, resolve tool_calls using ONLY tool messages
+{indent}    # that come AFTER it. DeepSeek and other strict providers require tool
+{indent}    # messages to follow the assistant that made the tool call.
 {indent}    _fixed = []
-{indent}    for _m in _merged:
+{indent}    for _i, _m in enumerate(_merged):
 {indent}        if isinstance(_m, dict) and _m.get("role") == "assistant":
-{indent}            # DeepSeek requires reasoning_content in multi-turn conversation history
 {indent}            if _is_deepseek and "reasoning_content" not in _m:
 {indent}                _m = {{**_m, "reasoning_content": ""}}
 {indent}            _tcs = _m.get("tool_calls")
 {indent}            if _tcs:
+{indent}                _resolved_ids = set()
+{indent}                for _j in range(_i + 1, len(_merged)):
+{indent}                    _tm = _merged[_j]
+{indent}                    if isinstance(_tm, dict) and _tm.get("role") == "tool":
+{indent}                        _tid = _tm.get("tool_call_id")
+{indent}                        if _tid:
+{indent}                            _resolved_ids.add(str(_tid))
 {indent}                _valid_tcs = [tc for tc in _tcs if str(tc.get("id", "")) in _resolved_ids]
 {indent}                if not _valid_tcs:
 {indent}                    _m = {{k: v for k, v in _m.items() if k != "tool_calls"}}

@@ -1,81 +1,51 @@
 model_list:
-  # === gpt-5.5: cliproxyapi → DeepSeek → Gemini ===
+  # === Primary providers (cliproxyapi) ===
   - model_name: gpt-5.5
     litellm_params:
       model: openai/gpt-5.5
       api_base: os.environ/CLIPROXY_API_BASE
       api_key: os.environ/CLIPROXY_API_KEY
-  - model_name: gpt-5.5
-    litellm_params:
-      model: deepseek/deepseek-v4-pro
-      api_base: https://api.deepseek.com
-      api_key: os.environ/UPSTREAM_API_KEY
-      use_chat_completions_api: true
-      max_tokens: 393216
-  - model_name: gpt-5.5
-    litellm_params:
-      model: openai/gemini-3.1-pro-preview
-      api_base: os.environ/GEMINI_API_BASE
-      api_key: os.environ/GEMINI_API_KEY
-      use_chat_completions_api: true
-      max_tokens: 65536
-
-  # === gpt-5.4: same as gpt-5.5 ===
   - model_name: gpt-5.4
     litellm_params:
       model: openai/gpt-5.4
       api_base: os.environ/CLIPROXY_API_BASE
       api_key: os.environ/CLIPROXY_API_KEY
-  - model_name: gpt-5.4
-    litellm_params:
-      model: deepseek/deepseek-v4-pro
-      api_base: https://api.deepseek.com
-      api_key: os.environ/UPSTREAM_API_KEY
-      use_chat_completions_api: true
-      max_tokens: 393216
-  - model_name: gpt-5.4
-    litellm_params:
-      model: openai/gemini-3.1-pro-preview
-      api_base: os.environ/GEMINI_API_BASE
-      api_key: os.environ/GEMINI_API_KEY
-      use_chat_completions_api: true
-      max_tokens: 65536
-
-  # === gpt-5.5-mini: cliproxyapi → DeepSeek flash → Gemini flash-lite ===
   - model_name: gpt-5.5-mini
-    litellm_params:
-      model: openai/gpt-5.5-mini
-      api_base: os.environ/CLIPROXY_API_BASE
-      api_key: os.environ/CLIPROXY_API_KEY
-  - model_name: gpt-5.5-mini
-    litellm_params:
-      model: deepseek/deepseek-v4-flash
-      api_base: https://api.deepseek.com
-      api_key: os.environ/UPSTREAM_API_KEY
-      use_chat_completions_api: true
-      max_tokens: 393216
-  - model_name: gpt-5.5-mini
-    litellm_params:
-      model: openai/gemini-3.1-flash-lite-preview
-      api_base: os.environ/GEMINI_API_BASE
-      api_key: os.environ/GEMINI_API_KEY
-      use_chat_completions_api: true
-      max_tokens: 65536
-
-  # === gpt-5.4-mini: same as gpt-5.5-mini ===
-  - model_name: gpt-5.4-mini
     litellm_params:
       model: openai/gpt-5.4-mini
       api_base: os.environ/CLIPROXY_API_BASE
       api_key: os.environ/CLIPROXY_API_KEY
   - model_name: gpt-5.4-mini
     litellm_params:
+      model: openai/gpt-5.4-mini
+      api_base: os.environ/CLIPROXY_API_BASE
+      api_key: os.environ/CLIPROXY_API_KEY
+
+  # === Fallback: DeepSeek ===
+  - model_name: deepseek-v4-pro
+    litellm_params:
+      model: deepseek/deepseek-v4-pro
+      api_base: https://api.deepseek.com
+      api_key: os.environ/UPSTREAM_API_KEY
+      use_chat_completions_api: true
+      max_tokens: 393216
+  - model_name: deepseek-v4-flash
+    litellm_params:
       model: deepseek/deepseek-v4-flash
       api_base: https://api.deepseek.com
       api_key: os.environ/UPSTREAM_API_KEY
       use_chat_completions_api: true
       max_tokens: 393216
-  - model_name: gpt-5.4-mini
+
+  # === Fallback: Gemini ===
+  - model_name: gemini-pro
+    litellm_params:
+      model: openai/gemini-3.1-pro-preview
+      api_base: os.environ/GEMINI_API_BASE
+      api_key: os.environ/GEMINI_API_KEY
+      use_chat_completions_api: true
+      max_tokens: 65536
+  - model_name: gemini-flash
     litellm_params:
       model: openai/gemini-3.1-flash-lite-preview
       api_base: os.environ/GEMINI_API_BASE
@@ -84,11 +54,15 @@ model_list:
       max_tokens: 65536
 
 router_settings:
-  routing_strategy: usage-based-routing-v2
   num_retries: 3
   allowed_fails: 5
   enable_pre_call_checks: true
   cooldown_time: 10
+  fallbacks:
+    - gpt-5.5: [deepseek-v4-pro, gemini-pro]
+    - gpt-5.4: [deepseek-v4-pro, gemini-pro]
+    - gpt-5.5-mini: [deepseek-v4-flash, gemini-flash]
+    - gpt-5.4-mini: [deepseek-v4-flash, gemini-flash]
 
 general_settings:
   master_key: os.environ/LITELLM_MASTER_KEY
