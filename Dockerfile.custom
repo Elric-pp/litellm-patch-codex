@@ -3,14 +3,19 @@ FROM docker.litellm.ai/berriai/litellm:main-stable
 COPY patch_main.py /tmp/patch_main.py
 COPY patch_transformation.py /tmp/patch_transformation.py
 COPY patch_handler.py /tmp/patch_handler.py
+COPY patch_endpoints.py /tmp/patch_endpoints.py
+COPY patch_router.py /tmp/patch_router.py
 
-# The running code lives in site-packages, NOT /app/litellm
 RUN python3 /tmp/patch_main.py \
         /app/.venv/lib/python3.13/site-packages/litellm/responses/main.py && \
     python3 /tmp/patch_transformation.py \
         /app/.venv/lib/python3.13/site-packages/litellm/responses/litellm_completion_transformation/transformation.py && \
     python3 /tmp/patch_handler.py \
         /app/.venv/lib/python3.13/site-packages/litellm/responses/litellm_completion_transformation/handler.py && \
+    python3 /tmp/patch_endpoints.py \
+        /app/.venv/lib/python3.13/site-packages/litellm/proxy/response_api_endpoints/endpoints.py && \
+    python3 /tmp/patch_router.py \
+        /app/.venv/lib/python3.13/site-packages/litellm/router.py && \
     find /app/.venv -name "*.pyc" -delete && \
     find /app/.venv -name "__pycache__" -type d -exec rm -rf {} + 2>/dev/null; \
-    rm /tmp/patch_main.py /tmp/patch_transformation.py /tmp/patch_handler.py
+    rm /tmp/patch_main.py /tmp/patch_transformation.py /tmp/patch_handler.py /tmp/patch_endpoints.py /tmp/patch_router.py
